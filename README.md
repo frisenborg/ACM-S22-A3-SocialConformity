@@ -1,2 +1,2 @@
 # ACM-S22-A3-SocialConformity
- 
+ Advanced Cognitive Modeling (Spring '22). Assignment 3 for the course, part of the MSc in Cognitive Science at Aarhus University. The main goal of the assignment is to code analyze real world data using Bayesian models of cognition.
