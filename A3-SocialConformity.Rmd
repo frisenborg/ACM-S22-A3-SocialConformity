@@ -59,6 +59,9 @@ pacman::p_load(tidyverse,
 plots_path = "plots/"
 stan_path  = "stan_models/"
 utils_path = "utils/"
+data_path  = "data/"
+
+df <- read.csv("data/sc_schizophrenia.csv")
 
 ```
 
@@ -67,6 +70,7 @@ utils_path = "utils/"
 ```{r}
 
 # Put code here
+
 
 ```
 
