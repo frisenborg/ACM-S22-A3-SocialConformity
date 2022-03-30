@@ -68,11 +68,58 @@ df <- read.csv("data/sc_schizophrenia.csv")
 
 
 ```{r}
+# Setup correct column for controls (ID's above 200)
+df[df$ID > 200, "Group"] <- 0
 
 # Put code here
 
+summary(df)
+
+length(table(df$ID))
+length(table(df[df$Group == 1, "ID"]))
+
+sum(is.na(df$ID))
+
+# convert to 0 / 1
+df$FirstRating_oh <- ifelse(df$FirstRating <= 4, 1, 0)
+df$SecondRating_oh <- ifelse(df$SecondRating <= 4, 1, 0)
+df$OtherRating_oh <- ifelse(df$OtherRating <= 4, 1, 0)
+
+df_subset <- df %>% 
+  subset(ID == 101)
 
 ```
+
+```{r}
+
+file <- file.path(paste(stan_path, "W8_simpleBayes.stan", sep=""))
+stan_model <- cmdstan_model(file, cpp_options = list(stan__threads = TRUE))
+
+data <- list(
+  N       = length(df_subset$FirstRating_oh),
+  y       = df_subset$SecondRating_oh,
+  Source1 = df_subset$FirstRating_oh,
+  Source2 = df_subset$OtherRating_oh)
+
+# The following command calls Stan with specific options.
+samples <- stan_model$sample(
+  data = data,
+  fixed_param = TRUE,  # sdfasdf
+  seed = 123,
+  chains = 2,
+  parallel_chains = 2,
+  threads_per_chain = 2,
+  iter_warmup = 1000,
+  iter_sampling = 2000,
+  refresh = 500
+)
+
+
+
+```
+
+
+
 
 
 
