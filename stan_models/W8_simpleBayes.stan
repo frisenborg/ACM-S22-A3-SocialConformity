@@ -13,8 +13,8 @@
 data {
   int<lower=0> N;
   array[N] int y;
-  array[N] int Source1;
-  array[N] int Source2;
+  vector[N] Source1;
+  vector[N] Source2;
 }
 
 //parameters {
@@ -30,7 +30,7 @@ generated quantities{
   array[N] real log_lik;
   
   for (n in 1:N){  
-    log_lik[n] = bernoulli_logit_lpmf(y[n] | logit(Source1[n]) + logit(Source2[n]), sigma);
+    log_lik[n] = bernoulli_logit_lpmf(y[n] | logit(Source1[n]) + logit(Source2[n]));
   }
   
 }
