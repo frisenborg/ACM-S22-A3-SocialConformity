@@ -57,6 +57,7 @@ pacman::p_load(tidyverse,
 
 df <- read.csv("data/sc_schizophrenia.csv")
 
+
 ```
 
 
@@ -98,7 +99,7 @@ data <- list(
 # The following command calls Stan with specific options.
 samples <- stan_model$sample(
   data = data,
-  fixed_param = TRUE,  # sdfasdf
+  fixed_param = TRUE, 
   seed = 123,
   chains = 1,
   parallel_chains = 1,
@@ -109,8 +110,48 @@ samples <- stan_model$sample(
 
 samples$summary()
 
+
+df_subset$likelihood<- exp(samples$summary()['mean'])
+
 ```
 
+
+# Using continuous data 
+```{r}
+# Create scales for the ratings 
+df_subset <- df_subset %>% mutate(FirstRating_c = rnorm(length(FirstRating), FirstRating * 9, 0) / 100,
+                                  SecondRating_c= rnorm(length(SecondRating), SecondRating * 9, 0) / 100,
+                                  OtherRating_c = rnorm(length(OtherRating), OtherRating * 9, 0) / 100)
+
+
+file_c <- file.path("stan_models/Continuous_Simple.stan")
+stan_model <- cmdstan_model(file_c, cpp_options = list(stan__threads = TRUE))
+
+data <- list(
+  N       = length(df_subset$FirstRating_c),
+  y       = df_subset$SecondRating_c,
+  Source1 = df_subset$FirstRating_c,
+  Source2 = df_subset$OtherRating_c)
+
+# The following command calls Stan with specific options.
+samples <- stan_model$sample(
+  data = data,
+  fixed_param = FALSE, 
+  seed = 123,
+  chains = 1,
+  parallel_chains = 1,
+  iter_warmup = 1000,
+  iter_sampling = 2000,
+  refresh = 500
+)
+
+# check the results 
+samples$summary()
+
+# making sense of the likelihoods 
+exp(-2.5785145)
+
+```
 
 
 

@@ -12,27 +12,25 @@
 
 data {
   int<lower=0> N;
-  array[N] int y;
+  vector[N] y;
   vector[N] Source1;
   vector[N] Source2;
 }
 
-//parameters {
-//  real sigma;
-//}
+parameters {
+  real<lower=0> sigma;
+}
 
-//model {
-//  target += normal_lpdf(sigma | 0, .3) -
-//      normal_lccdf(0 | 0, .3);
-//}
+model {
+  target += normal_lpdf(sigma | 0, 0.3) -
+      normal_lccdf(0 | 0, 0.3);
+}
 
 generated quantities{
   array[N] real log_lik;
   
   for (n in 1:N){  
-    log_lik[n] = bernoulli_logit_lpmf(y[n] | logit(Source1[n]) + logit(Source2[n]));
+    log_lik[n] = normal_lpdf(y[n] | logit(Source1[n]) + logit(Source2[n]), sigma);
   }
   
 }
-
-
