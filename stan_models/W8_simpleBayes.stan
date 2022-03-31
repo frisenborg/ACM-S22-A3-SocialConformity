@@ -17,17 +17,20 @@ data {
   array[N] int Source2;
 }
 
-parameters {
-}
+//parameters {
+//  real sigma;
+//}
 
-model {
-}
+//model {
+//  target += normal_lpdf(sigma | 0, .3) -
+//      normal_lccdf(0 | 0, .3);
+//}
 
 generated quantities{
   array[N] real log_lik;
   
   for (n in 1:N){  
-    log_lik[n] = bernoulli_logit_lpmf(y[n] | logit(Source1[n]) +  logit(Source2[n]));
+    log_lik[n] = bernoulli_logit_lpmf(y[n] | logit(Source1[n]) + logit(Source2[n]), sigma);
   }
   
 }

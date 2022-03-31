@@ -55,12 +55,6 @@ pacman::p_load(tidyverse,
                cmdstanr,
                brms)
 
-# Define paths for folders
-plots_path = "plots/"
-stan_path  = "stan_models/"
-utils_path = "utils/"
-data_path  = "data/"
-
 df <- read.csv("data/sc_schizophrenia.csv")
 
 ```
@@ -81,9 +75,9 @@ length(table(df[df$Group == 1, "ID"]))
 sum(is.na(df$ID))
 
 # convert to 0 / 1
-df$FirstRating_oh <- ifelse(df$FirstRating <= 4, 1, 0)
+df$FirstRating_oh <- ifelse(df$FirstRating <= 4, 0.9, 0.1)
 df$SecondRating_oh <- ifelse(df$SecondRating <= 4, 1, 0)
-df$OtherRating_oh <- ifelse(df$OtherRating <= 4, 1, 0)
+df$OtherRating_oh <- ifelse(df$OtherRating <= 4, 0.9, 0.1)
 
 df_subset <- df %>% 
   subset(ID == 101)
@@ -92,8 +86,8 @@ df_subset <- df %>%
 
 ```{r}
 
-file <- file.path(paste(stan_path, "W8_simpleBayes.stan", sep=""))
-stan_model <- cmdstan_model(file, cpp_options = list(stan__threads = TRUE))
+file <- file.path("stan_models/W8_simpleBayes.stan")
+stan_model <- cmdstan_model(file)
 
 data <- list(
   N       = length(df_subset$FirstRating_oh),
@@ -104,11 +98,10 @@ data <- list(
 # The following command calls Stan with specific options.
 samples <- stan_model$sample(
   data = data,
-  fixed_param = TRUE,  # sdfasdf
+  #fixed_param = TRUE,  # sdfasdf
   seed = 123,
-  chains = 2,
-  parallel_chains = 2,
-  threads_per_chain = 2,
+  chains = 1,
+  parallel_chains = 1,
   iter_warmup = 1000,
   iter_sampling = 2000,
   refresh = 500
