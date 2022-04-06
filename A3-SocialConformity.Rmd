@@ -148,10 +148,73 @@ samples <- stan_model$sample(
 # check the results 
 samples$summary()
 
-# making sense of the likelihoods 
-exp(-2.5785145)
+
+# creating a dataframe for model predictions
+prediction_df <- samples$summary() %>%
+  subset(grepl("prediction", variable)) %>%
+  mutate(prediction = mean / 9 * 100,
+         true_rating = df_subset$SecondRating,
+         trial = seq(length(variable))) %>%
+  select(trial, true_rating, prediction)
+
+prediction_df_long <- pivot_longer(prediction_df, cols=c("true_rating", "prediction"))
+
+# plotting the model predictions against true ratings
+prediction_df %>%
+  pivot_longer(cols=c("true_rating", "prediction")) %>%
+  subset(trial < 30) %>%
+  ggplot(aes(x = trial, y = value, color = name)) +
+  geom_line()
+
+# investigate error of model predictions
+prediction_df <- prediction_df %>%
+  mutate(error = abs(true_rating - prediction))
+
+# print the summary stats
+summary(prediction_df$error)
+sd(prediction_df$error)
 
 ```
+
+
+
+
+
+
+```{r}
+
+file_c <- file.path("stan_models/bayes_with_w8s.stan")
+stan_model <- cmdstan_model(file_c, cpp_options = list(stan__threads = TRUE))
+
+data <- list(
+  N       = length(df_subset$FirstRating_c),
+  y       = df_subset$SecondRating_c,
+  Source1 = df_subset$FirstRating_c,
+  Source2 = df_subset$OtherRating_c)
+
+# The following command calls Stan with specific options.
+samples <- stan_model$sample(
+  data = data,
+  fixed_param = FALSE, 
+  seed = 123,
+  chains = 1,
+  parallel_chains = 1,
+  iter_warmup = 1000,
+  iter_sampling = 2000,
+  refresh = 500
+)
+
+
+samples$summary()
+
+
+
+```
+
+
+
+
+
 
 
 
