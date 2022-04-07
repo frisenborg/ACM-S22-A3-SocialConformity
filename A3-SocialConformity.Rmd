@@ -58,22 +58,8 @@ pacman::p_load(tidyverse,
 df <- read.csv("data/sc_schizophrenia.csv")
 
 
-```
-
-
-
-```{r}
 # Setup correct column for controls (ID's above 200)
 df[df$ID > 200, "Group"] <- 0
-
-# Put code here
-
-summary(df)
-
-length(table(df$ID))
-length(table(df[df$Group == 1, "ID"]))
-
-sum(is.na(df$ID))
 
 # convert to 0 / 1
 df$FirstRating_oh <- ifelse(df$FirstRating <= 4, 0.9, 0.1)
@@ -83,11 +69,30 @@ df$OtherRating_oh <- ifelse(df$OtherRating <= 4, 0.9, 0.1)
 df_subset <- df %>% 
   subset(ID == 101)
 
+df_multiagent_subset <- df %>% 
+  subset(ID == 101 | ID == 103)
+
+
+
+# Create scales for the ratings 
+df_subset <- df_subset %>% mutate(FirstRating_c = rnorm(length(FirstRating), FirstRating * 9, 0) / 100,
+                                  SecondRating_c= rnorm(length(SecondRating), SecondRating * 9, 0) / 100,
+                                  OtherRating_c = rnorm(length(OtherRating), OtherRating * 9, 0) / 100)
+
+df_multiagent_subset <- df_multiagent_subset %>% 
+  mutate(FirstRating_c = rnorm(length(FirstRating), FirstRating * 9, 0) / 100,
+         SecondRating_c= rnorm(length(SecondRating), SecondRating * 9, 0) / 100,
+         OtherRating_c = rnorm(length(OtherRating), OtherRating * 9, 0) / 100)
+
+
+
 ```
+
+
 
 ```{r}
 
-file <- file.path("stan_models/W8_simpleBayes.stan")
+file <- file.path("stan_models/simpleBayes_binom.stan")
 stan_model <- cmdstan_model(file)
 
 data <- list(
@@ -113,25 +118,27 @@ samples$summary()
 
 df_subset$likelihood<- exp(samples$summary()['mean'])
 
+#samples$loo()
+
 ```
 
 
 # Using continuous data 
 ```{r}
-# Create scales for the ratings 
-df_subset <- df_subset %>% mutate(FirstRating_c = rnorm(length(FirstRating), FirstRating * 9, 0) / 100,
-                                  SecondRating_c= rnorm(length(SecondRating), SecondRating * 9, 0) / 100,
-                                  OtherRating_c = rnorm(length(OtherRating), OtherRating * 9, 0) / 100)
 
-
-file_c <- file.path("stan_models/Continuous_Simple.stan")
+file_c <- file.path("stan_models/simpleBayes.stan")
 stan_model <- cmdstan_model(file_c, cpp_options = list(stan__threads = TRUE))
 
+trials = length(df_multiagent_subset$FirstRating_c)
+agents = length(unique(df_multiagent_subset$ID))
+
 data <- list(
-  N       = length(df_subset$FirstRating_c),
-  y       = df_subset$SecondRating_c,
-  Source1 = df_subset$FirstRating_c,
-  Source2 = df_subset$OtherRating_c)
+  N       = trials,
+  agents  = agents,
+  y       = matrix(df_multiagent_subset$SecondRating_c, nrow=trials, ncol=agents),
+  Source1 = matrix(df_multiagent_subset$FirstRating_c, nrow=trials, ncol=agents),
+  Source2 = matrix(df_multiagent_subset$OtherRating_c, nrow=trials, ncol=agents))
+
 
 # The following command calls Stan with specific options.
 samples <- stan_model$sample(
@@ -149,6 +156,11 @@ samples <- stan_model$sample(
 samples$summary()
 
 
+
+
+
+### THIS DOESNT WORK RIGHT NOW ###
+
 # creating a dataframe for model predictions
 prediction_df <- samples$summary() %>%
   subset(grepl("prediction", variable)) %>%
@@ -157,7 +169,6 @@ prediction_df <- samples$summary() %>%
          trial = seq(length(variable))) %>%
   select(trial, true_rating, prediction)
 
-prediction_df_long <- pivot_longer(prediction_df, cols=c("true_rating", "prediction"))
 
 # plotting the model predictions against true ratings
 prediction_df %>%
@@ -174,6 +185,9 @@ prediction_df <- prediction_df %>%
 summary(prediction_df$error)
 sd(prediction_df$error)
 
+# inspect the loo
+samples$loo()
+
 ```
 
 
@@ -183,14 +197,18 @@ sd(prediction_df$error)
 
 ```{r}
 
-file_c <- file.path("stan_models/bayes_with_w8s.stan")
+file_c <- file.path("stan_models/weightedBayes_multilevel.stan")
 stan_model <- cmdstan_model(file_c, cpp_options = list(stan__threads = TRUE))
 
+trials = length(df_multiagent_subset$FirstRating_c)
+agents = length(unique(df_multiagent_subset$ID))
+
 data <- list(
-  N       = length(df_subset$FirstRating_c),
-  y       = df_subset$SecondRating_c,
-  Source1 = df_subset$FirstRating_c,
-  Source2 = df_subset$OtherRating_c)
+  trials  = trials,
+  agents  = agents,
+  choice  = matrix(df_multiagent_subset$SecondRating_c, nrow=trials, ncol=agents),
+  source1 = matrix(df_multiagent_subset$FirstRating_c, nrow=trials, ncol=agents),
+  source2 = matrix(df_multiagent_subset$OtherRating_c, nrow=trials, ncol=agents))
 
 # The following command calls Stan with specific options.
 samples <- stan_model$sample(
@@ -206,8 +224,6 @@ samples <- stan_model$sample(
 
 
 samples$summary()
-
-
 
 ```
 
