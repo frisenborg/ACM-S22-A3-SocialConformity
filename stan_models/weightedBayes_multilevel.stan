@@ -6,6 +6,12 @@ functions {
     w = 0.5 + inv_logit(w_raw)/2;
     return log((w * L + 1 - w) ./ ((1 - w) * L + w));
   }
+    
+  real normal_lb_rng(real mu, real sigma, real lb) {
+    real p = normal_cdf(lb | mu, sigma);  // cdf for bounds
+    real u = uniform_rng(p, 1);
+    return (sigma * inv_Phi(u)) + mu;  // inverse cdf for value
+  }
 }
 
 data {
@@ -33,6 +39,8 @@ transformed parameters {
 model {
   target += normal_lpdf(weight1M | 0, 1);
   target += normal_lpdf(weight2M | 0, 1);
+  target += normal_lpdf(sigma | 0.2, 0.1) -
+      normal_lccdf(0 | 0.2, 0.1); // We should check this is best way to define sigma 
   target += normal_lpdf(tau[1] | 0, .3) -
     normal_lccdf(0 | 0, .3);
   target += normal_lpdf(tau[2] | 0, .3) -
@@ -51,26 +59,18 @@ model {
   }
 }
 
-
-// make the weights interpretable
-// 
-
-
-
-/*
 generated quantities{
-  array[trials] real log_lik;
-  real<lower=0> sigma_prior;
-  real prior_preds;
-  real post_preds;
+  real weight1M_prior;
+  real weight2M_prior;
+  real sigma_prior;
+  real tau_1_prior;
+  real tau_2_prior;
   
-  sigma_prior = inv_logit(normal_rng(prior_mean, prior_sd));
-  prior_preds = normal_lpdf(y | logit(Source1) +  logit(Source2), sigma_prior);
-  post_preds = normal_lpdf(y | logit(Source1) +  logit(Source2), sigma);
   
-  for (n in 1:trials) {
-    log_lik[n] = normal_lpdf(choice[trials] | logit(source1[trial]) +  logit(source2[trial]), sigma);
-  }
+  weight1M_prior = normal_rng(0, 1);
+  weight2M_prior = normal_rng(0, 1);
+  sigma_prior = normal_lb_rng(0.2, 0.1, 0);
+  tau_1_prior = normal_lb_rng(0, 0.3, 0); // check about the 0.3 - why these numbers 
+  tau_2_prior = normal_lb_rng(0, 0.3, 0);
 }
 
-*/

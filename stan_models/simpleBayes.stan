@@ -1,3 +1,10 @@
+functions{
+  real normal_lb_rng(real mu, real sigma, real lb) {
+    real p = normal_cdf(lb | mu, sigma);  // cdf for bounds
+    real u = uniform_rng(p, 1);
+    return (sigma * inv_Phi(u)) + mu;  // inverse cdf for value
+  }
+}
 
 data {
   int<lower=0> N;
@@ -27,6 +34,8 @@ generated quantities{
       prediction[n, agent] = inv_logit(logit(Source1[n, agent]) + logit(Source2[n, agent]));
     }
   }
+  real sigma_pred; 
+  sigma_pred = normal_lb_rng(0.5, 0.25, 0); // generates 1 number for each sample many times
 }
 
 

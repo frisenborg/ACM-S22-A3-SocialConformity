@@ -46,7 +46,7 @@ The schizophrenia data was collected within the study described in *Simonsen, A.
 
 
 ```{r Setup, message=FALSE}
-
+getwd()
 library(pacman)
 
 pacman::p_load(tidyverse,
@@ -155,8 +155,8 @@ samples <- stan_model$sample(
 # check the results 
 samples$summary()
 
-
-
+# save to df 
+test <- samples$summary()
 
 
 ### THIS DOESNT WORK RIGHT NOW ###
