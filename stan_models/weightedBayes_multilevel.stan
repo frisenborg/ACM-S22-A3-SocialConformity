@@ -19,10 +19,10 @@ data {
 parameters {
   real weight1M;
   real weight2M;
-  real<lower=0> sigma;
-  vector<lower=0>[2] tau;
-  matrix[2, agents] z_IDs;
-  cholesky_factor_corr[2] L_u;
+  real<lower=0> sigma;  // overall sd of the outcome
+  vector<lower=0>[2] tau;   // sd of the weights
+  matrix[2, agents] z_IDs;  // z score of individual differences
+  cholesky_factor_corr[2] L_u;  // correlation of the weights
 }
 
 transformed parameters {
