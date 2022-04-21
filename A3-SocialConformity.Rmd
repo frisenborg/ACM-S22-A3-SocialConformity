@@ -5,8 +5,14 @@ author: "Linnea, Melina, Orla, and Tobias"
 ---
 
 # To do
+
+Find a good way for prior posterior update plots to work
+
 * Cleanup and comment Stan
-* Model quality checks for simple Bayes (i.e., sigma)
+* Prior and posterior checks for both Simple- and Weighted Bayes
+* Plot prior- posterior update plots for Weighted Bayes
+
+
 * Model quality checks for weighted Bayes
 1. prior - posterior update. this makes most sense for weighted bayes, but you still have sigma in simple bayes to check
 2. prior and posterior predictive checks: running predictions from model and priors only and from models and posteriors.
@@ -73,6 +79,28 @@ scaler <- function(column, bins) {
   # We scale according to bins+2 to remove 0 and 1 from the scaling
   scaled_column <- rnorm(length(column),  column  * bins+2, 0) / 100
   return (scaled_column)
+}
+
+
+prior_posterior_update_plot <- function(stan_model, prior, posterior) {
+  
+  prior_draws <- as_draws_df(stan_model$draws(variables=prior)) %>%
+    rename("prior" = prior)
+  posterior_draws <- as_draws_df(stan_model$draws(variables=posterior)) %>%
+    rename("posterior" = posterior)
+  
+  plot <- ggplot() +
+    geom_density(aes(prior_draws$prior, fill="Prior"), color=NA, alpha=0.6) + 
+    geom_density(aes(posterior_draws$posterior, fill="Posterior"), color=NA, alpha=0.6) + 
+    scale_fill_manual(name = "", values=c("FireBrick3", "dodgerblue3")) +
+    theme_minimal() +
+    labs(
+      title = paste(str_to_title(posterior), "Prior and Posterior"),
+      x     = str_to_title(posterior),
+      y     = "Density"
+    )
+  
+  return(plot)
 }
 ```
 
@@ -175,7 +203,7 @@ df %>%
 
 # Simple Bayes
 
-```{r Stan}
+```{r sb stan}
 data <- df %>%
   subset(Group == 1 & ID <= 103)
 
@@ -185,11 +213,11 @@ agents = length(unique(data$ID))
 stan_model <- cmdstan_model("stan_models/simpleBayes.stan")
 
 stan_data <- list(
-  N       = trials,
+  trials  = trials,
   agents  = agents,
-  y       = matrix(data$SecondRating_c, nrow=trials, ncol=agents),
-  Source1 = matrix(data$FirstRating_c, nrow=trials, ncol=agents),
-  Source2 = matrix(data$OtherRating_c, nrow=trials, ncol=agents)
+  outcome = matrix(data$SecondRating_c, nrow=trials, ncol=agents),
+  source1 = matrix(data$FirstRating_c, nrow=trials, ncol=agents),
+  source2 = matrix(data$OtherRating_c, nrow=trials, ncol=agents)
 )
 
 simpleBayes <- stan_model$sample(
@@ -211,27 +239,11 @@ rm(trials, agents, data, stan_model, stan_data)
 simpleBayes$summary()
 ```
 
-```{r Sigma quality plot}
-#  Prior- posterior update plot
-posterior_draws <- as_draws_df(simpleBayes$draws(variables=c("sigma")))
-draws <- as_draws_df(simpleBayes$draws(variables=c("sigma_prior"))) %>%
-  mutate(sigma_posterior = posterior_draws$sigma)
-
-draws %>%
-  ggplot() +
-    geom_density(aes(sigma_prior, fill="Prior"), color=NA, alpha=0.6) + 
-    geom_density(aes(sigma_posterior, fill="Posterior"), color=NA, alpha=0.6) + 
-    scale_fill_manual(name = "", values=c("FireBrick3", "dodgerblue3")) +
-    theme_minimal() +
-    labs(
-      title = "Simple Bayes: Sigma Prior and Posterior",
-      x     = "Sigma",
-      y     = "Posterior Density"
-    )
-
-rm(posterior_draws)
-
-
+```{r sb sigma}
+simpleBayes %>% 
+  prior_posterior_update_plot(
+    posterior = "sigma",
+    prior     = "sigma_prior")
 ```
 
 
@@ -270,14 +282,14 @@ samples$loo()
 
 # Weighted Bayes
 
-```{r}
+```{r wb stan}
 data <- df %>%
   subset(Group == 1 & ID <= 103)
 
 trials = length(data$ID)
 agents = length(unique(data$ID))
 
-stan_model <- cmdstan_model("stan_models/weightedBayes_multilevel.stan")
+stan_model <- cmdstan_model("stan_models/weightedBayes.stan")
 
 stan_data <- list(
   trials  = trials,
@@ -298,12 +310,42 @@ weightedBayes <- stan_model$sample(
   refresh = 500
 )
 
+#saveRDS(weightedBayes, file = "stan_models/weightedBayes.rds")
+#weightedBayes <- readRDS(file = "stan_models/weightedBayes.rds")
+
 rm(trials, agents, data, stan_model, stan_data)
 
 # Print the results
 weightedBayes$summary()
 ```
 
+```{r}
+weightedBayes %>% 
+  prior_posterior_update_plot(
+    posterior  = "weight1M",
+    prior      = "weight1M_prior")
 
+weightedBayes %>% 
+  prior_posterior_update_plot(
+    posterior  = "weight2M",
+    prior      = "weight2M_prior")
+
+weightedBayes %>% 
+  prior_posterior_update_plot(
+    posterior  = "sigma",
+    prior      = "sigma_prior")
+
+weightedBayes %>% 
+  prior_posterior_update_plot(
+    posterior  = "tau[1]",
+    prior      = "tau1_prior")
+
+weightedBayes %>% 
+  prior_posterior_update_plot(
+    posterior  = "tau[2]",
+    prior      = "tau2_prior")
+
+
+```
 
 

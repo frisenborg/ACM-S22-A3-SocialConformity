@@ -1,17 +1,19 @@
+
 functions{
-  real normal_lb_rng(real mu, real sigma, real lb) {
-    real p = normal_cdf(lb | mu, sigma);  // cdf for bounds
+  // Create a function for random number generating a truncated normal
+  real normal_trunc_rng(real mu, real sigma, real lower_boundary) {
+    real p = normal_cdf(lower_boundary | mu, sigma);  // cdf for bounds
     real u = uniform_rng(p, 1);
     return (sigma * inv_Phi(u)) + mu;  // inverse cdf for value
   }
 }
 
 data {
-  int<lower=0> N;
+  int<lower=0> trials;
   int<lower=0> agents;
-  array[N, agents] real y;
-  array[N, agents] real Source1;
-  array[N, agents] real Source2;
+  array[trials, agents] real outcome;
+  array[trials, agents] real source1;
+  array[trials, agents] real source2;
 }
 
 parameters {
@@ -25,21 +27,25 @@ model {
 
 generated quantities{
   array[N, agents] real log_lik;
-  // Removed prediction because we don't need it?
-  //array[N, agents] real prediction;
+  array[N, agents] real prediction;
+  real sigma_prior;
   
+  // Loop through each agent and trial
   for (agent in 1:agents){
-    for (n in 1:N){
-      log_lik[n, agent] = normal_lpdf(y[n, agent] | logit(Source1[n, agent]) + logit(Source2[n, agent]), sigma);
+    for (trial in 1:trials){
       
-      //prediction[n, agent] = inv_logit(logit(Source1[n, agent]) + logit(Source2[n, agent]));
+      // We can calculate the log_likelihood of an outcome given the model
+      log_lik[trial, agent] = normal_lpdf(
+        outcome[trial, agent] | logit(source1[trial, agent]) + logit(source2[trial, agent]),
+        sigma);
+      
+      // We can also predict an outcome from the model
+      prediction[n, agent] = inv_logit(logit(Source1[n, agent]) + logit(Source2[n, agent]));
     }
   }
   
-  real sigma_prior;
-  sigma_prior = normal_lb_rng(0.5, 0.25, 0);
+  // Lastly, we generate predictions from the sigma prior
+  sigma_prior = normal_trunc_rng(0.5, 0.25, 0);
 }
-
-
 
 
