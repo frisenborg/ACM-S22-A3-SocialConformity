@@ -137,6 +137,8 @@ df %>%
       y     = "Count",
       x     = "",
     )
+
+
 ```
 
 ```{r Trials}
@@ -246,6 +248,16 @@ simpleBayes %>%
     prior     = "sigma_prior")
 ```
 
+```{r}
+
+draws_df <- as_draws_df(simpleBayes$draws())
+
+#Chain plot estimating sigma
+
+ggplot(draws_df, aes(.iteration, sigma, group = .chain, color = .chain)) +
+  geom_line() +
+  theme_classic()
+```
 
 ```{r}
 ### THIS DOESNT WORK RIGHT NOW ###
@@ -348,4 +360,45 @@ weightedBayes %>%
 
 ```
 
+```{r}
+
+draws_df <- as_draws_df(weightedBayes$draws())
+
+#Chain plots
+
+ggplot(draws_df, aes(.iteration, sigma, group = .chain, color = .chain)) +
+  geom_line() +
+  theme_classic()
+
+ggplot(draws_df, aes(.iteration, w1M, group = .chain, color = .chain)) +
+  geom_line() +
+  theme_classic()
+
+ggplot(draws_df, aes(.iteration, w2M, group = .chain, color = .chain)) +
+  geom_line() +
+  theme_classic()
+
+
+```
+
+
+#Model comparison
+
+```{r}
+ #Does cores needs to be defined?
+
+loo_simple <-simpleBayes$loo()
+loo_weighted <- weightedBayes$loo()
+
+plot(loo_simple)
+
+plot(loo_weighted)
+```
+
+```{r}
+loo_compare(loo_simple, loo_weighted)
+
+
+loo_model_weights(list(loo_simple, loo_weighted))
+```
 
