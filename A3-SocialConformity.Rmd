@@ -67,10 +67,13 @@ The schizophrenia data was collected within the study described in *Simonsen, A.
 ```{r Setup, message=FALSE}
 library(pacman)
 
-pacman::p_load(tidyverse, here, posterior, cmdstanr, rstan, brms)
+pacman::p_load(tidyverse, here, posterior, cmdstanr, rstan, brms, loo)
+
 
 options(mc.cores = parallel::detectCores()) # Parallelize
 rstan_options(auto_write = TRUE)  # store compiled Stan models
+
+
 ```
 
 ```{r Function definitions}
@@ -137,6 +140,7 @@ df %>%
       y     = "Count",
       x     = "",
     )
+
 ```
 
 ```{r Trials}
@@ -173,6 +177,8 @@ df %>%
       x     = "",
     ) +
     facet_wrap(~ Round)
+
+ggsave(paste(plots_path, "\\Data_ex_RT.jpg", sep=""), width=7.29, height=4.5)
 ```
 
 ```{r Ratings}
@@ -197,6 +203,8 @@ df %>%
       x     = "Rating",
     ) +
     facet_wrap(~ Round)
+
+ggsave(paste(plots_path, "\\Data_ex_Ratings.jpg", sep=""), width=7.29, height=4.5)
 
 ```
 
@@ -223,7 +231,7 @@ stan_data <- list(
 simpleBayes <- stan_model$sample(
   data = stan_data,
   seed = 123,
-  chains = 1,
+  chains = 2,
   parallel_chains = 1,
   iter_warmup = 1000,
   iter_sampling = 2000,
@@ -244,11 +252,18 @@ simpleBayes %>%
   prior_posterior_update_plot(
     posterior = "sigma",
     prior     = "sigma_prior")
+
+draws_df <- as_draws_df(simpleBayes$draws())
+#Chain plots
+ggplot(draws_df, aes(.iteration, sigma, group = .chain, color = .chain)) +
+  geom_line() +
+  theme_classic()
 ```
 
 
 ```{r}
 ### THIS DOESNT WORK RIGHT NOW ###
+
 
 # creating a dataframe for model predictions
 prediction_df <- samples$summary() %>%
@@ -303,7 +318,7 @@ weightedBayes <- stan_model$sample(
   data = stan_data,
   fixed_param = FALSE, 
   seed = 123,
-  chains = 1,
+  chains = 2,
   parallel_chains = 1,
   iter_warmup = 1000,
   iter_sampling = 2000,
@@ -345,6 +360,41 @@ weightedBayes %>%
     posterior  = "tau[2]",
     prior      = "tau2_prior")
 
+
+```
+```{r}
+draws_df <- as_draws_df(weightedBayes$draws())
+
+#Chain plots
+ggplot(draws_df, aes(.iteration, sigma, group = .chain, color = .chain)) +
+  geom_line() +
+  theme_classic()
+ggplot(draws_df, aes(.iteration, weight1M, group = .chain, color = .chain)) +
+  geom_line() +
+  theme_classic()
+ggplot(draws_df, aes(.iteration, weight2M, group = .chain, color = .chain)) +
+  geom_line() +
+  theme_classic()
+```
+
+
+#Model comparison
+
+```{r}
+
+loo_simple <-simpleBayes$loo(cores=2)
+loo_weighted <- weightedBayes$loo(cores=2)
+
+plot(loo_weighted)
+
+print(loo_simple)
+
+pareto_k_table(loo_simple)
+pareto_k_table(loo_weighted)
+```
+
+```{r}
+loo_compare(loo_simple, loo_weighted)
 
 ```
 

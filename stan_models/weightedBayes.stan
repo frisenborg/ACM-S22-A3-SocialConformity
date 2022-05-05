@@ -23,6 +23,7 @@ data {
 }
 
 parameters {
+ // Mean of the distributions of weights for the two sources in the overall distributions.
   real weight1M;
   real weight2M;
   real<lower=0> sigma;  // overall sd of the outcome
@@ -60,6 +61,7 @@ model {
 }
 
 generated quantities{
+  array[trials, agents] real log_lik;
   real weight1M_prior;
   real weight2M_prior;
   real sigma_prior;
@@ -70,7 +72,16 @@ generated quantities{
   weight1M_prior = normal_rng(0, 1);
   weight2M_prior = normal_rng(0, 1);
   sigma_prior = normal_lb_rng(0.2, 0.1, 0);
-  tau1_prior = normal_lb_rng(0, 0.3, 0); // check about the 0.3 - why these numbers 
+  tau1_prior = normal_lb_rng(0, 0.3, 0); 
   tau2_prior = normal_lb_rng(0, 0.3, 0);
+  
+  for (agent in 1:agents){
+    for (trial in 1:trials){
+      log_lik[trial, agent] = normal_lpdf(choice[trial, agent] |
+        weight_f(source1[trial, agent], weight1M + IDs[1, agent]) +
+        weight_f(source2[trial, agent], weight2M + IDs[2, agent]),
+        sigma);
+    }
+  }
 }
 

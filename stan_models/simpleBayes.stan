@@ -26,8 +26,8 @@ model {
 }
 
 generated quantities{
-  array[N, agents] real log_lik;
-  array[N, agents] real prediction;
+  array[trials, agents] real log_lik;
+  array[trials, agents] real prediction;
   real sigma_prior;
   
   // Loop through each agent and trial
@@ -40,7 +40,7 @@ generated quantities{
         sigma);
       
       // We can also predict an outcome from the model
-      prediction[n, agent] = inv_logit(logit(Source1[n, agent]) + logit(Source2[n, agent]));
+      prediction[trial, agent] = inv_logit(logit(source1[trial, agent]) + logit(source2[trial, agent]));
     }
   }
   
